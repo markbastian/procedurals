@@ -4,17 +4,16 @@
   :url "https://github.com/markbastian/procedurals"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.10.0-beta3"]
-                 [org.clojure/clojurescript "1.10.339"]
-                 [quil "2.7.1"]
-                 [reagent "0.8.1"]
-                 [org.clojure/core.async "0.4.474"
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [org.clojure/clojurescript "1.10.773"]
+                 [quil "3.1.0"]
+                 [reagent "0.10.0"]
+                 [org.clojure/core.async "1.3.610"
                   :exclusions [org.clojure/tools.reader]]
-                 [cljsjs/hammer "2.0.8-0"]
-                 [clojure-lanterna "0.9.7"]]
+                 [cljsjs/hammer "2.0.8-0"]]
 
-  :plugins [[lein-figwheel "0.5.16"]
-            [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
+  :plugins [[lein-figwheel "0.5.2"]
+            [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]]
 
   ;:main procedurals.launcher
 
@@ -22,12 +21,13 @@
 
   :jar-exclusions [#"\.swp|\.swo|\.DS_Store"]
   :profiles {:uberjar {:aot :all}
-             :dev {:plugins [[lein-cljsbuild "1.1.7"]]
-                   :dependencies [[com.cemerick/piggieback "0.2.2"]
-                                  [figwheel-sidecar "0.5.16"]]
+             :dev {:plugins [[lein-cljsbuild "1.1.3"]
+                             [org.clojure/clojurescript "1.10.773"]]
+                   :dependencies [[cider/piggieback "0.5.0"]
+                                  [figwheel-sidecar "0.5.20"]]
                    :repl-options {:nrepl-middleware
-                                  [cemerick.piggieback/wrap-cljs-repl]}}
-             :cljs {:plugins [[lein-cljsbuild "1.1.7"]] }}
+                                  [cider.piggieback/wrap-cljs-repl]}}
+             :cljs {:plugins [[lein-cljsbuild "1.1.2"]] }}
 
   :source-paths ["src/clj" "src/cljc"]
 
