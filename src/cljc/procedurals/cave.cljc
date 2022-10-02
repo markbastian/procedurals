@@ -1,63 +1,200 @@
-(ns procedurals.cave)
+(ns procedurals.cave
+  (:require [clojure.set :refer [difference intersection union]]))
 
 (defn prngrid [grid]
   (doseq [row grid] (prn (apply str (map {:wall "#" :floor " "} row)))))
+
+(defn grid->lines [grid]
+  (mapv
+    (fn [row] (apply str (map {:wall "#" :floor " "} row)))
+    grid))
 
 (defn init [w h] (vec (repeat h (vec (repeat w :wall)))))
 
 (defn mark-floor [grid cell]
   (cond-> grid (get-in grid cell) (assoc-in cell :floor)))
 
-(defn rand-step [from]
-  (mapv + from (rand-nth [[0 1] [0 -1] [1 0] [-1 0]])))
-
-(defn step [grid start]
-  (first (filter (partial get-in grid) (repeatedly #(rand-step start)))))
-
-(defn wander-cave [start grid iterations]
-  (reduce mark-floor grid (take iterations (iterate (partial step grid) start))))
-
-(defn cave-step [{:keys [loc grid] :as m}]
-  (let [n (step grid loc)]
-    (-> m (assoc :loc n) (update :grid mark-floor n))))
-
-(defn wander-cave2 [start grid iterations]
-  (:grid (nth (iterate cave-step {:loc start :grid grid}) iterations)))
-
-(defn neighbors [[x y]]
+(defn ortho-neighbors [[x y]]
   [[(inc x) y] [(dec x) y] [x (inc y)] [x (dec y)]])
 
-(defn wander [{:keys [frontier grid] :as m}]
-  (let [n (rand-nth (vec frontier))]
-    (-> m
-        (assoc-in (into [:grid] n) :floor)
-        (update :frontier disj n)
-        (update :frontier into (filter #(= :wall (get-in grid %)) (neighbors n))))))
-
-(defn frontier-cave [start grid iterations]
-  (:grid (nth (iterate wander {:frontier #{start} :grid grid}) iterations)))
-
-(defn ca-grid [w h n]
-  (random-sample n (for [i (range w) j (range h)] [i j])))
-
-(defn nine-grid [[x y]]
+(defn all-neighbors [[x y]]
   (map vector
        ((juxt identity inc inc identity dec dec dec identity inc) x)
        ((juxt identity identity inc inc inc identity dec dec dec) y)))
 
+(defn random-walk-step
+  ([start] (mapv + start (rand-nth [[0 1] [0 -1] [1 0] [-1 0]])))
+  ([grid start]
+   (first (filter (partial get-in grid) (repeatedly #(random-walk-step start))))))
+
+(defn random-walk-cave-step [{:keys [current-location grid] :as m}]
+  (let [next-location (random-walk-step grid current-location)]
+    (-> m
+        (assoc :current-location next-location)
+        (assoc-in (into [:grid] next-location) :floor))))
+
+(defn random-walk-cave-seq [start grid]
+  (->> {:current-location start :grid (assoc-in grid start :floor)}
+       (iterate random-walk-cave-step)
+       (map :grid)
+       distinct))
+
+(defn wander-cave [start grid iterations]
+  (nth (random-walk-cave-seq start grid) iterations))
+
+;The frontier cave strategy randomly marks any "frontier" location of a grid as floor and
+;then adds all wall neighbors of the selected location to the frontier. This tends to create
+;larger more cavernous spaces than random walk as the space can expand from any location,
+;not the location of the "walker"
+(defn frontier-cave-step [{:keys [frontier grid] :as m}]
+  (when-some [n (some-> frontier seq rand-nth)]
+    (-> m
+        (assoc-in (into [:grid] n) :floor)
+        (update :frontier disj n)
+        (update :frontier into (filter #(= :wall (get-in grid %)) (ortho-neighbors n))))))
+
+(defn frontier-cave-seq [start grid]
+  (->> {:frontier #{start} :grid grid}
+       (iterate frontier-cave-step)
+       (map :grid)
+       (take-while identity)))
+
+(defn frontier-cave [start grid iterations]
+  (nth (frontier-cave-seq start grid) iterations))
+
+;Cellular automata caves
+(defn ca-grid [w h n]
+  (random-sample n (for [row (range h) col (range w)] [row col])))
+
 (defn ca-cave-step [grid]
   (->> grid
-       (mapcat nine-grid)
+       (mapcat all-neighbors)
        frequencies
        (filter (fn [[_ c]] (> c 4)))
        (map first)))
 
 (def ca-cave-iterator #(iterate ca-cave-step %))
 
-(defn ca-cave [w h pct iterations]
-  (reduce mark-floor (init w h) (nth (ca-cave-iterator (ca-grid w h pct)) iterations)))
+(defn ca-cave-seq [w h pct]
+  (let [grid (init w h)]
+    (->> (ca-grid w h pct)
+         ca-cave-iterator
+         (map (partial reduce mark-floor grid)))))
 
-;(prngrid (ca-cave 32 32 0.45 18))
-;(prngrid (wander-cave [16 16] (init 32 32) 160))
-;(prngrid (wander-cave2 [16 16] (init 32 32) 160))
-;(prngrid (frontier-cave [16 16] (init 32 32) 500))
+(defn ca-cave [w h pct iterations]
+  (nth (ca-cave-seq w h pct) iterations))
+
+(defn floor-coords [grid]
+  (set (for [i (range (count grid)) j (range (count (grid i))) :when (= :floor (get-in grid [i j]))] [i j])))
+
+(defn advance [{:keys [frontier unvisited] :as m}]
+  (let [u (difference unvisited frontier)
+        f (intersection u (set (mapcat ortho-neighbors frontier)))]
+    (-> m
+        (update :visited conj frontier)
+        (assoc :unvisited u)
+        (assoc :frontier f))))
+
+(def meadow-32x32x4
+  ["################################"
+   "#######################     ####"
+   "######################       ###"
+   "#####################        ###"
+   "##################     ###  ####"
+   "#################     ##########"
+   "#################     ##########"
+   "#################     ##########"
+   "#####  ##########    ###########"
+   "####    ##########  ############"
+   "###      #######################"
+   "###      #######################"
+   "####    ########################"
+   "################################"
+   "################################"
+   "################################"
+   "################################"
+   "################################"
+   "########   #####################"
+   "#######     ####################"
+   "#######     ####################"
+   "#######    #####################"
+   "########  ######################"
+   "################################"
+   "################################"
+   "##########   ###################"
+   "#########     ##################"
+   "#########     ##################"
+   "##########    ##################"
+   "###########    #################"
+   "###########    #################"
+   "############  ##################"])
+
+(defn meadow-coords [grid]
+  (for [i (range (count grid))
+        j (range (count (grid i)))
+        :when (= " " (str (get-in grid [i j])))]
+    [i j]))
+
+(defn find-islands [[f & r]]
+  (loop [frontier [f] unvisited (set r) visited #{} islands []]
+    (if (first frontier)
+      (let [front (filter unvisited (distinct (mapcat ortho-neighbors frontier)))
+            u (difference unvisited (set frontier))
+            v (into visited frontier)]
+        (if (seq front)
+          (recur front u v islands)
+          (recur [(first u)] (disj u (first u)) (empty visited) (conj islands v))))
+      islands)))
+
+(defn center [island]
+  (mapv (fn [v] (Math/round (double (/ v (count island))))) (apply mapv + island)))
+
+(defn step-towards [a b]
+  (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :default 0))]
+    (let [[dx dy] (map - b a)
+          delta (if (> (Math/abs dx) (Math/abs dy)) [(signum dx) 0] [0 (signum dy)])]
+      (mapv + a delta))))
+
+(defn path-to
+  ([start finish]
+   (->> (iterate #(step-towards % finish) start)
+        (take-while (complement #{finish}))))
+  ([[start finish]] (path-to start finish)))
+
+(defn shuffle-path-to
+  ([start finish]
+   (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :default 0))]
+     (let [[dx dy] (map - finish start)
+           x-steps (repeat (Math/abs dx) [(signum dx) 0])
+           y-steps (repeat (Math/abs dy) [0 (signum dy)])]
+       (->> (into x-steps y-steps)
+            shuffle
+            (reductions (partial mapv +) start)))))
+  ([[start finish]] (shuffle-path-to start finish)))
+
+(defn connect [islands]
+  (let [centers (map center islands)
+        links (take (dec (count islands)) (partition 2 1 (shuffle centers)))]
+    (mapcat shuffle-path-to links)))
+
+;(map (partial apply str)
+;     (reduce
+;       (fn [grid coord] (assoc-in grid coord \space))
+;       (mapv (comp vec seq) meadow-32x32x4)
+;       (-> meadow-32x32x4 meadow-coords find-islands connect)))
+
+(defn connect-cavern [cavern]
+  (let [grid (grid->lines cavern)]
+    (->> grid
+         meadow-coords
+         find-islands
+         connect
+         (reduce
+           (fn [grid coord] (assoc-in grid coord \space))
+           (mapv (comp vec seq) grid))
+         (mapv (partial apply str)))))
+
+(comment
+  (connect-cavern (ca-cave 32 64 0.45 18))
+  (connect-cavern (wander-cave [16 16] (init 32 32) 200))
+  (connect-cavern (frontier-cave [16 16] (init 32 32) 500)))

@@ -4,16 +4,17 @@
   :url "https://github.com/markbastian/procedurals"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.10.1"]
-                 [org.clojure/clojurescript "1.10.773"]
+  :dependencies [[org.clojure/clojure "1.11.1"]
+                 [org.clojure/clojurescript "1.11.60"]
                  [quil "3.1.0"]
-                 [reagent "0.10.0"]
-                 [org.clojure/core.async "1.3.610"
+                 [reagent "1.1.1"]
+                 [org.clojure/core.async "1.5.648"
                   :exclusions [org.clojure/tools.reader]]
-                 [cljsjs/hammer "2.0.8-0"]]
+                 [cljsjs/hammer "2.0.8-0"]
+                 [clojure-lanterna "0.9.7"]]
 
-  :plugins [[lein-figwheel "0.5.2"]
-            [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]]
+  :plugins [[lein-figwheel "0.5.20"]
+            [lein-cljsbuild "1.1.8" :exclusions [[org.clojure/clojure]]]]
 
   ;:main procedurals.launcher
 

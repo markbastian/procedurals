@@ -1,4 +1,8 @@
-(ns procedurals.terrain)
+(ns procedurals.terrain
+  (:require #?(:clj [clojure.java.io :as io]))
+  (:import #?(:clj (java.awt.image BufferedImage))
+           #?(:clj (javax.imageio ImageIO))
+           #?(:clj (java.awt Color))))
 
 ;https://danielbeard.wordpress.com/2010/08/07/terrain-generation-and-smoothing/
 
@@ -35,14 +39,14 @@
 
 (def step (comp square diamond double-indices-2d))
 
-(defn create-image-map [{:keys [cells dim]}]
-  (let [img (BufferedImage. dim dim BufferedImage/TYPE_INT_RGB)
-        lo (apply min (map second cells))
-        hi (apply max (map second cells))]
-    (doseq [[[i j] v] cells
-            :let [c (float (/ (- v lo) (- hi lo)))]]
-      (.setRGB img i j (.getRGB (Color. c c c))))
-    (ImageIO/write img "png" (io/file "img.png"))))
+#?(:clj (defn create-image-map [{:keys [cells dim]}]
+          (let [img (BufferedImage. dim dim BufferedImage/TYPE_INT_RGB)
+                lo (apply min (map second cells))
+                hi (apply max (map second cells))]
+            (doseq [[[i j] v] cells
+                    :let [c (float (/ (- v lo) (- hi lo)))]]
+              (.setRGB img i j (.getRGB (Color. c c c))))
+            (ImageIO/write img "png" (io/file "img.png")))))
 
 (comment
   (def a {:cells {[0 0] 0.0 [0 1] 0.0 [1 1] 0.0 [1 0] 0.0}
