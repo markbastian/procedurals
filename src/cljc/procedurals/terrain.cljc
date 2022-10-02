@@ -5,47 +5,58 @@
 (defn double-indices-1d [cells]
   (zipmap (map #(* 2 %) (keys cells)) (vals cells)))
 
-(defn double-indices-2d [cells]
-  (zipmap (map (fn [[x y]][(* 2 x) (* 2 y)]) (keys cells)) (vals cells)))
+(defn double-indices-2d [{:keys [cells] :as m}]
+  (-> m
+      (assoc :cells (zipmap (map (fn [[x y]] [(* 2 x) (* 2 y)]) (keys cells)) (vals cells)))
+      (update :width * 0.5)))
 
-(defn diamond [cells width]
-  (into cells (let [dim (dec (* 2 (Math/sqrt (count cells))))]
-                (for [i (range 1 dim 2) j (range 1 dim 2) :let
-                      [is ((juxt inc dec dec inc) i)
-                       js ((juxt inc inc dec dec) j)
-                       c (map vector is js)
-                       x (* 0.5 (reduce + (map cells c)))]]
-                  [[i j] (+ x (* width (dec (* 2.0 (rand)))))]))))
+(defn diamond [{:keys [cells width dim] :as m}]
+  (let [dim (+ dim (dec dim))]
+    (-> m
+        (assoc :dim dim)
+        (update :cells into (for [i (range 1 dim 2) j (range 1 dim 2)
+                                  :let
+                                  [is ((juxt inc dec dec inc) i)
+                                   js ((juxt inc inc dec dec) j)
+                                   c (map vector is js)
+                                   x (* 0.5 (reduce + (map cells c)))]]
+                              [[i j] (+ x (* width (dec (* 2.0 (rand)))))])))))
 
-(defn square [cells width]
-  (into cells (let [dim (Math/sqrt (count cells))]
-                (for [i (range 0 dim) j (range 0 dim) :when (not (cells [i j])) :let
-                      [is ((juxt inc identity dec identity) i)
-                       js ((juxt identity inc identity dec) j)
-                       c (map vector is js)
-                       x (* 0.5 (reduce + (filter identity (map cells c))))]]
-                  [[i j] (+ x (* width (dec (* 2.0 (rand)))))]))))
+(defn square [{:keys [cells width dim] :as m}]
+  (update m :cells into
+          (for [i (range 0 dim) j (range 0 dim)
+                :when (not (cells [i j]))
+                :let
+                [is ((juxt inc identity dec identity) i)
+                 js ((juxt identity inc identity dec) j)
+                 c (map vector is js)
+                 x (* 0.5 (reduce + (filter identity (map cells c))))]]
+            [[i j] (+ x (* width (dec (* 2.0 (rand)))))])))
 
-(defn gap-fill [cells width]
-  (for [i (range 1 (dec (* 2 (count cells))) 2)
-        :let [x (* 0.5 (reduce + (map cells ((juxt inc dec) i))))]]
-    [i (+ x (* width (dec (* 2.0 (rand)))))]))
+(def step (comp square diamond double-indices-2d))
 
-(defn divide [{ :keys [width cells]}]
-  (let [c (double-indices-1d cells)
-        gaps (gap-fill c width)]
-    { :width (* 0.5 width) :cells (into c gaps)}))
+(defn create-image-map [{:keys [cells dim]}]
+  (let [img (BufferedImage. dim dim BufferedImage/TYPE_INT_RGB)
+        lo (apply min (map second cells))
+        hi (apply max (map second cells))]
+    (doseq [[[i j] v] cells
+            :let [c (float (/ (- v lo) (- hi lo)))]]
+      (.setRGB img i j (.getRGB (Color. c c c))))
+    (ImageIO/write img "png" (io/file "img.png"))))
 
-(defn generate [ic steps] (nth (iterate divide ic) steps))
+(comment
+  (def a {:cells {[0 0] 0.0 [0 1] 0.0 [1 1] 0.0 [1 0] 0.0}
+          :width 1.0
+          :dim   2})
 
-;(def a { [0 0] 0.0 [0 1] 0.0 [1 1] 0.0 [1 0] 0.0 })
-;(def b (double-indices-2d a))
-;(prn b)
-;(def c (diamond b 1.0))
-;(prn c)
-;(def d (square c 1.0))
-;(prn d)
-;(prn (count d))
-;
-;;21? <- not right.
-;(-> d double-indices-2d (diamond 1.0) (square 1.0) count prn)
+  (def b (double-indices-2d a))
+  (prn b)
+  (def c (diamond b))
+  (prn c)
+  (def d (square c))
+  (prn d)
+  (prn (count d))
+
+  ;21? <- not right.
+  (-> d step step step step step step step step create-image-map)
+  )
