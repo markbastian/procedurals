@@ -1,13 +1,13 @@
 (ns procedurals.cave
   (:require [clojure.set :refer [difference intersection union]]))
 
-(defn prngrid [grid]
-  (doseq [row grid] (prn (apply str (map {:wall "#" :floor " "} row)))))
-
-(defn grid->lines [grid]
+(defn grid-data->ascii-lines [grid]
   (mapv
     (fn [row] (apply str (map {:wall "#" :floor " "} row)))
     grid))
+
+(defn prngrid [grid]
+  (doseq [row (grid-data->ascii-lines grid)] (prn row)))
 
 (defn init [w h] (vec (repeat h (vec (repeat w :wall)))))
 
@@ -39,7 +39,7 @@
        (map :grid)
        distinct))
 
-(defn wander-cave [start grid iterations]
+(defn wander-caverns [start grid iterations]
   (nth (random-walk-cave-seq start grid) iterations))
 
 ;The frontier cave strategy randomly marks any "frontier" location of a grid as floor and
@@ -59,7 +59,7 @@
        (map :grid)
        (take-while identity)))
 
-(defn frontier-cave [start grid iterations]
+(defn frontier-caverns [start grid iterations]
   (nth (frontier-cave-seq start grid) iterations))
 
 ;Cellular automata caves
@@ -81,7 +81,7 @@
          ca-cave-iterator
          (map (partial reduce mark-floor grid)))))
 
-(defn ca-cave [w h pct iterations]
+(defn ca-caverns [w h pct iterations]
   (nth (ca-cave-seq w h pct) iterations))
 
 (defn floor-coords [grid]
@@ -95,44 +95,11 @@
         (assoc :unvisited u)
         (assoc :frontier f))))
 
-(def meadow-32x32x4
-  ["################################"
-   "#######################     ####"
-   "######################       ###"
-   "#####################        ###"
-   "##################     ###  ####"
-   "#################     ##########"
-   "#################     ##########"
-   "#################     ##########"
-   "#####  ##########    ###########"
-   "####    ##########  ############"
-   "###      #######################"
-   "###      #######################"
-   "####    ########################"
-   "################################"
-   "################################"
-   "################################"
-   "################################"
-   "################################"
-   "########   #####################"
-   "#######     ####################"
-   "#######     ####################"
-   "#######    #####################"
-   "########  ######################"
-   "################################"
-   "################################"
-   "##########   ###################"
-   "#########     ##################"
-   "#########     ##################"
-   "##########    ##################"
-   "###########    #################"
-   "###########    #################"
-   "############  ##################"])
-
 (defn meadow-coords [grid]
   (for [i (range (count grid))
         j (range (count (grid i)))
-        :when (= " " (str (get-in grid [i j])))]
+        :let [cell (get-in grid [i j])]
+        :when (or (= :floor cell) (= " " (str cell)))]
     [i j]))
 
 (defn find-islands [[f & r]]
@@ -147,7 +114,9 @@
       islands)))
 
 (defn center [island]
-  (mapv (fn [v] (Math/round (double (/ v (count island))))) (apply mapv + island)))
+  (mapv
+    (fn [v] (Math/round (double (/ v (count island)))))
+    (apply mapv + island)))
 
 (defn step-towards [a b]
   (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :default 0))]
@@ -162,6 +131,8 @@
   ([[start finish]] (path-to start finish)))
 
 (defn shuffle-path-to
+  "Generate a path from start to finish (inclusive of both ends) that randomly
+  shuffles steps, producing equivalent manhattan distances along the path."
   ([start finish]
    (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :default 0))]
      (let [[dx dy] (map - finish start)
@@ -172,29 +143,31 @@
             (reductions (partial mapv +) start)))))
   ([[start finish]] (shuffle-path-to start finish)))
 
-(defn connect [islands]
-  (let [centers (map center islands)
+(comment
+  (shuffle-path-to [0 0] [10 10])
+  (shuffle-path-to [[0 0] [10 10]]))
+
+(defn connect
+  "Add connective :floor cells to each cavern to ensure all are connected."
+  [cavern-data]
+  (let [islands (-> cavern-data meadow-coords find-islands)
+        centers (map center islands)
         links (take (dec (count islands)) (partition 2 1 (shuffle centers)))]
-    (mapcat shuffle-path-to links)))
+    (reduce
+      (fn [acc coord] (assoc-in acc coord :floor))
+      cavern-data
+      (mapcat shuffle-path-to links))))
 
-;(map (partial apply str)
-;     (reduce
-;       (fn [grid coord] (assoc-in grid coord \space))
-;       (mapv (comp vec seq) meadow-32x32x4)
-;       (-> meadow-32x32x4 meadow-coords find-islands connect)))
-
-(defn connect-cavern [cavern]
-  (let [grid (grid->lines cavern)]
-    (->> grid
-         meadow-coords
-         find-islands
-         connect
-         (reduce
-           (fn [grid coord] (assoc-in grid coord \space))
-           (mapv (comp vec seq) grid))
-         (mapv (partial apply str)))))
+(defn connect-caverns [caverns]
+  (->> caverns connect grid-data->ascii-lines))
 
 (comment
-  (connect-cavern (ca-cave 32 64 0.45 18))
-  (connect-cavern (wander-cave [16 16] (init 32 32) 200))
-  (connect-cavern (frontier-cave [16 16] (init 32 32) 500)))
+  (let [cavern-data (ca-caverns 32 64 0.45 18)]
+    (->> cavern-data
+         connect
+         grid-data->ascii-lines))
+
+  (connect (ca-caverns 32 64 0.45 18))
+  (connect-caverns (ca-caverns 32 64 0.45 18))
+  (connect-caverns (wander-caverns [16 16] (init 32 32) 200))
+  (connect-caverns (frontier-caverns [16 16] (init 32 32) 500)))
