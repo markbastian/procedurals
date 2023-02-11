@@ -28,11 +28,11 @@
                                   [figwheel-sidecar "0.5.20"]]
                    :repl-options {:nrepl-middleware
                                   [cider.piggieback/wrap-cljs-repl]}}
-             :cljs {:plugins [[lein-cljsbuild "1.1.2"]] }}
+             :cljs {:plugins [[lein-cljsbuild "1.1.2"]]}}
 
   :source-paths ["src/clj" "src/cljc"]
 
-  :clj {:builds [{ :source-paths ["src/clj" "src/cljc" "test"] }]}
+  :clj {:builds [{:source-paths ["src/clj" "src/cljc" "test"]}]}
 
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs" "src/cljc"]
@@ -55,8 +55,7 @@
                                    :optimizations :advanced
                                    :pretty-print false}}]}
 
-  :figwheel {
-             ;; :http-server-root "public" ;; default and assumes "resources"
+  :figwheel {;; :http-server-root "public" ;; default and assumes "resources"
              ;; :server-port 3449 ;; default
              ;; :server-ip "127.0.0.1"
 

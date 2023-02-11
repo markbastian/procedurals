@@ -1,16 +1,13 @@
 (ns procedurals.core
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
-  (:require [reagent.core :as reagent :refer [atom]]
-            [procedurals.dungeon-viewer :as pdv]
+  (:require [procedurals.cave :as c]
             [procedurals.dungeon-generator :as pdg]
-            [procedurals.cave :as c]
-            [cljs.reader :refer [read-string]]))
+            [reagent.core :as reagent :refer [atom]]))
 
 (enable-console-print!)
 
 (println "Edits to this text should show up in your developer console.")
 
-(defn gen-grid [{:keys [w h i p]}]
+(defn gen-grid [{:keys [w h _i p]}]
   (vec (take 64 (c/ca-cave-iterator (c/ca-grid w h (* p 0.01))))))
 
 (defn update-grid [m]
@@ -22,9 +19,8 @@
                                    (when (not= o n)
                                      (update-grid n))))
     (reagent/render-component
-      [pdg/render state]
-      (do
-        app-context))))
+     [pdg/render state]
+     app-context)))
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on

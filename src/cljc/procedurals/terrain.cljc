@@ -1,8 +1,8 @@
 (ns procedurals.terrain
   (:require #?(:clj [clojure.java.io :as io]))
-  (:import #?(:clj (java.awt.image BufferedImage))
-           #?(:clj (javax.imageio ImageIO))
-           #?(:clj (java.awt Color))))
+  (:import #?(:clj (java.awt Color))
+           #?(:clj (java.awt.image BufferedImage))
+           #?(:clj (javax.imageio ImageIO))))
 
 ;https://danielbeard.wordpress.com/2010/08/07/terrain-generation-and-smoothing/
 
@@ -62,5 +62,4 @@
   (prn (count d))
 
   ;21? <- not right.
-  (-> d step step step step step step step step create-image-map)
-  )
+  (-> d step step step step step step step step create-image-map))

@@ -1,7 +1,7 @@
 (ns procedurals.lanterna
-  (:require [clojure.core.async :as ca]
-            [lanterna.screen :as s]
-            [procedurals.cave :as cave]))
+  (:require [procedurals.cave :as cave]
+            [clojure.core.async :as ca]
+            [lanterna.screen :as s]))
 
 (defonce scr (s/get-screen))
 

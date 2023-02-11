@@ -1,10 +1,10 @@
 (ns procedurals.cave
-  (:require [clojure.set :refer [difference intersection union]]))
+  (:require [clojure.set :refer [difference intersection]]))
 
 (defn grid-data->ascii-lines [grid]
   (mapv
-    (fn [row] (apply str (map {:wall "#" :floor " "} row)))
-    grid))
+   (fn [row] (apply str (map {:wall "#" :floor " "} row)))
+   grid))
 
 (defn prngrid [grid]
   (doseq [row (grid-data->ascii-lines grid)] (prn row)))
@@ -115,11 +115,11 @@
 
 (defn center [island]
   (mapv
-    (fn [v] (Math/round (double (/ v (count island)))))
-    (apply mapv + island)))
+   (fn [v] (Math/round (double (/ v (count island)))))
+   (apply mapv + island)))
 
 (defn step-towards [a b]
-  (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :default 0))]
+  (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :else 0))]
     (let [[dx dy] (map - b a)
           delta (if (> (Math/abs dx) (Math/abs dy)) [(signum dx) 0] [0 (signum dy)])]
       (mapv + a delta))))
@@ -134,7 +134,7 @@
   "Generate a path from start to finish (inclusive of both ends) that randomly
   shuffles steps, producing equivalent manhattan distances along the path."
   ([start finish]
-   (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :default 0))]
+   (letfn [(signum [x] (cond (pos? x) 1 (neg? x) -1 :else 0))]
      (let [[dx dy] (map - finish start)
            x-steps (repeat (Math/abs dx) [(signum dx) 0])
            y-steps (repeat (Math/abs dy) [0 (signum dy)])]
@@ -154,9 +154,9 @@
         centers (map center islands)
         links (take (dec (count islands)) (partition 2 1 (shuffle centers)))]
     (reduce
-      (fn [acc coord] (assoc-in acc coord :floor))
-      cavern-data
-      (mapcat shuffle-path-to links))))
+     (fn [acc coord] (assoc-in acc coord :floor))
+     cavern-data
+     (mapcat shuffle-path-to links))))
 
 (defn connect-caverns [caverns]
   (->> caverns connect grid-data->ascii-lines))

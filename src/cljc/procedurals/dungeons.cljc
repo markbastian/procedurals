@@ -28,8 +28,7 @@
   (->> s
        (map :center)
        (apply map +)
-       (mapv #(/ % (count s))))
-  )
+       (mapv #(/ % (count s)))))
 
 (comment
   (->> (repeatedly 20 #(random-room 20 4 4))
