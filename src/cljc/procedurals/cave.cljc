@@ -85,7 +85,9 @@
   (nth (ca-cave-seq w h pct) iterations))
 
 (defn floor-coords [grid]
-  (set (for [i (range (count grid)) j (range (count (grid i))) :when (= :floor (get-in grid [i j]))] [i j])))
+  (set (for [i (range (count grid)) j (range (count (grid i)))
+             :when (= :floor (get-in grid [i j]))]
+         [i j])))
 
 (defn advance [{:keys [frontier unvisited] :as m}]
   (let [u (difference unvisited frontier)
